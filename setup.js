@@ -30,6 +30,11 @@ SJ+SA7YG9zthbLxRoBBEwIURQr5Zy1B8PonepyLz3UhL7kMVEs=X02q6`,
     HEADLESS: process.env.PPTR_HEADLESS || false
 };
 
+// Async timeout
+const delay = (ms) => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+};
+
 (async () => {
     const browser = await puppeteer.launch({
         headless: CONFIG.HEADLESS,
@@ -54,7 +59,7 @@ SJ+SA7YG9zthbLxRoBBEwIURQr5Zy1B8PonepyLz3UhL7kMVEs=X02q6`,
         console.log("--------------------------------------------\n");
         console.log("Setup Steps:");
         // Start timing now
-        const start = performance.now();
+        const start = new Date();
         // Setup screenshot directory
         if (fs.existsSync(SCREENSHOTS_OUTPUT_PATH)) {
             // We remove previous screenshots
@@ -82,7 +87,7 @@ SJ+SA7YG9zthbLxRoBBEwIURQr5Zy1B8PonepyLz3UhL7kMVEs=X02q6`,
         }
 
         await page.screenshot({ path: `${SCREENSHOTS_OUTPUT_PATH}/confluence-setup-finished.png` });
-        const end = performance.now();
+        const end = new Date();
         const timeTakenInSeconds = (end - start)/1000
         console.log
         console.log(`\nConfluence standalone instance setup has finished !! (${timeTakenInSeconds} seconds)`);
@@ -100,9 +105,32 @@ SJ+SA7YG9zthbLxRoBBEwIURQr5Zy1B8PonepyLz3UhL7kMVEs=X02q6`,
 async function installationTypeSelection(page) {
     console.log("- Installation type selection");
     let url = `${CONFIG.BASE_URL}/setup/setupstart.action`;
-    await page.goto(url);
+
+    const maxRetryNumber = 10;
+    let success = false;
+    for (let retryNumber = 1; retryNumber <= maxRetryNumber; retryNumber++) {
+        try {
+            const response = await page.goto(url);
+            if (response.status() < 400) {
+                success = true;
+                break;
+            }
+        } catch (e) {
+            await delay(1000 * retryNumber);
+        }
+    }
+
+    if (!success) {
+        throw `Exceeded the allowed time to access the url "${url}"`;
+    }
+
     if (url == await page.evaluate(() => document.location.href)) {
-        await page.click('#custom');
+        try {
+            await page.click('#custom');
+        } catch (e) {
+            // For older Confluence versions 6.0 to 6.5
+            await page.click('div[setup-type="custom"]');
+        }
         await page.click('#setup-next-button');
     }
     await page.waitFor(1500);
@@ -132,22 +160,45 @@ async function configureDatabase(page) {
     console.log("- Configuring Database");
     let url = `${CONFIG.BASE_URL}/setup/setupdbchoice-start.action`;
     if (url == await page.evaluate(() => document.location.href)) {
-        await page.click('#custom');
-        await page.click('#setup-next-button');
+        try {
+            await page.click('#custom');
+            await page.click('#setup-next-button');
+            await page.waitFor(1000);
+            await page.click('#dbConfigInfo-customize');
+            await page.click('#dbConfigInfo-databaseUrl');
+            await page.evaluate(db_url => {
+                document.getElementById('dbConfigInfo-databaseUrl').value = db_url;
+            }, CONFIG.DB_JDBC_URL);
+        } catch (e) {
+            // For older Confluence versions 6.0 to 6.5
+            await page.click('#select-db');
+            await page.waitFor(1000);
+            await Promise.all([
+                page.click('input[value="Direct JDBC"]'),
+                page.waitForNavigation({ timeout: 0, waitUntil: 'networkidle0' })
+            ]);
+            await page.click("#dbConfigInfo\\.databaseUrl");
+            await page.evaluate(db_url => {
+                document.getElementById("dbConfigInfo.databaseUrl").value = db_url;
+            }, CONFIG.DB_JDBC_URL);
+        }
     }
-    await page.waitFor(1000);
 
-    await page.click('#dbConfigInfo-customize');
-    await page.evaluate(db_url => {
-        document.getElementById('dbConfigInfo-databaseUrl').value = db_url;
-    }, CONFIG.DB_JDBC_URL);
+    try {
+        await page.click('#dbConfigInfo-username');
+        await page.keyboard.type(CONFIG.DB_USER);
 
-    await page.click('#dbConfigInfo-username');
-    await page.keyboard.type(CONFIG.DB_USER);
+        await page.click('#dbConfigInfo-password');
+        await page.keyboard.type(CONFIG.DB_PASSWORD);
+    } catch (e) {
+        // For older Confluence versions 6.0 to 6.5
+        await page.click('#dbConfigInfo\\.userName');
+        await page.keyboard.type(CONFIG.DB_USER);
 
-    await page.click('#dbConfigInfo-password');
-    await page.keyboard.type(CONFIG.DB_PASSWORD);
-
+        await page.click('#dbConfigInfo\\.password');
+        await page.keyboard.type(CONFIG.DB_PASSWORD);
+    }
+    
     await Promise.all([
         page.click('#setup-next-button'),
         page.waitForNavigation({ timeout: 0, waitUntil: 'networkidle0' })
@@ -210,7 +261,7 @@ async function disableConfluenceOnboardingModule(page) {
     await page.waitFor(10000)
     await page.click('#upm-manage-filter-box');
     await page.evaluate(() => document.getElementById("upm-manage-filter-box").value = "");
-    await page.keyboard.type("confluence-onboarding");
+    await page.keyboard.type("onboarding");
     await page.waitFor(5000)
     await page.click('div[data-key="com.atlassian.confluence.plugins.confluence-onboarding"]');
     await page.waitFor(5000)
