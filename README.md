@@ -22,11 +22,28 @@ This script uses puppeteer in order to automate the following setup steps:
 There are two ways this script can be used:
 
 ### As a script inside a Docker image
-TODO
+
+...along with the [docker-confluence-for-testing](https://github.com/aruizca/docker-confluence-for-testing) script. It should be used from there. But if you want, you can get the Docker image from [Docker Hub](https://hub.docker.com/repository/docker/aruizca/puppeteer-confluence-setup).
 
 ### As a node.js script for any Confluence image
-TODO
 
+Just clone this repo, install the dependencies and run it providing environment variables if you want/need:
+
+```javascript
+npm i
+[ENV1=VALUE1 ENV2=VALUE2] npm start
+```
+
+## Environment variables available
+
+VAR NAME | DEFAULT VALUE
+-------- | -------------
+PPTR_CONFLUENCE_BASE_URL | http://localhost:8090/confluence
+PPTR_CONFLUENCE_LICENSE | [A 3 hours timebob license](https://developer.atlassian.com/platform/marketplace/timebomb-licenses-for-testing-server-apps/)
+PPTR_DB_USER | postgres
+PPTR_DB_PASSWORD | postgres
+PPTR_JDBC_URL | jdbc:postgresql://postgres:5432/confluence
+PPTR_HEADLESS | false
 
 ## Versions supported
 

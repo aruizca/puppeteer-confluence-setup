@@ -89,7 +89,6 @@ const delay = (ms) => {
         await page.screenshot({ path: `${SCREENSHOTS_OUTPUT_PATH}/confluence-setup-finished.png` });
         const end = new Date();
         const timeTakenInSeconds = (end - start)/1000
-        console.log
         console.log(`\nConfluence standalone instance setup has finished !! (${timeTakenInSeconds} seconds)`);
         console.log("====================================================");
     } catch (error) {
