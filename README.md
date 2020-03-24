@@ -4,7 +4,7 @@
 
 A [puppeteer](https://github.com/puppeteer/puppeteer) based script and Docker image to automate the initial setup of Confluence for testing purposes.
 
-After many years spinning up standalone instances of Confluence for testing purposes as part of my work at [Comalatech](https://comalatech.com), I created the project [docker-confluence-for-testing](https://github.com/aruizca/docker-confluence-for-testing) to do that automagically inside a Docker container with the chance to run any Confluence version, on different external DB engines *not H2) and optionally using an external LDAP. The problem is that each time you spin up a new instance you have to manually go through the initial setup as Atlassian is yet to provide an unsupervised mechanism to perform that setup 🤦🏻‍♂️
+After many years spinning up standalone instances of Confluence for testing purposes as part of my work at [Comalatech](https://comalatech.com), I created the project [docker-confluence-for-testing](https://github.com/aruizca/docker-confluence-for-testing) to do that automagically inside a Docker container with the chance to run any Confluence version, on different external DB engines (not H2) and optionally using an external LDAP. The problem is that each time you spin up a new instance you have to manually go through the initial setup as Atlassian is yet to provide an unsupervised mechanism to perform that setup 🤦🏻‍♂️
 
 I don't know how many times I have repeated the same process manually, **but those days are over thanks to this script** 😊
 
