@@ -12,18 +12,16 @@ const ADMIN_USER = {
 // Configuration settings with defaults
 const CONFIG = {
     BASE_URL: process.env.PPTR_CONFLUENCE_BASE_URL || "http://localhost:8090/confluence",
-    // If no license is provided, then this 3 hours timebomb license for any Atlassian Server product is used
-    CONFLUENCE_LICENSE: process.env.PPTR_CONFLUENCE_LICENSE || `AAACLg0ODAoPeNqNVEtv4jAQvudXRNpbpUSEx6FIOQBxW3ZZiCB0V1WllXEG8DbYke3A8u/XdUgVQ
-yg9ZvLN+HuM/e1BUHdGlNvuuEHQ73X73Y4bR4nbbgU9ZwFiD2IchcPH+8T7vXzuej9eXp68YSv45
-UwoASYhOeYwxTsIE7RIxtNHhwh+SP3a33D0XnntuxHsIeM5CIdwtvYxUXQPoRIF6KaC0FUGVlEB3
-v0hOAOWYiH9abFbgZith3i34nwOO65gsAGmZBhUbNC/nIpjhBWEcefJWelzqIDPWz/OtjmXRYv2X
-yqwnwueFkT57x8e4cLmbCD1QnX0UoKQoRc4EUgiaK4oZ2ECUrlZeay75sLNs2JDmZtWR8oPCfWZG
-wHAtjzXgIo0SqmZiKYJmsfz8QI5aI+zApuq6fqJKVPAMCPnNpk4LPW6kBWgkZb+kQAzzzS2g6Dnt
-e69Tqvsr4SOskIqEFOeggz1v4zrHbr0yLJR8rU64FpQpVtBy1mZxM4CnHC9Faf8tKMnTF1AiXORF
-ixyQaWto3RZ+ncWLXtMg6EnKZZRpmQNb2R8tnJXFulCfXmXLry7TrHBWn2HNVyH8WYxj9AzmsxiN
-L/R88Xg6rA1lVs4QpO5titxhplJcCY2mFFZLutAZVhKipm15/VhJx36YVqyN8YP7IaGC1+lwnJ7Q
-5pJpNmxk5hP3qovutY8Pi4E2WIJ59esnr1p+T6eD67teBVCHf+ga+ho4/4D9YItZDAsAhQ5qQ6pA
-SJ+SA7YG9zthbLxRoBBEwIURQr5Zy1B8PonepyLz3UhL7kMVEs=X02q6`,
+    // If no license is provided, then this 10 user 3 hour timebomb license for any Confluence DC is used
+    CONFLUENCE_LICENSE: process.env.PPTR_CONFLUENCE_LICENSE || `AAABtQ0ODAoPeNp9kV9v0zAUxd/9Ka7EWyWnTmESqxSJNQlbxdJUTbLBgAfXuV0NqR3ZTqHfHjdpY
+VSCB7/4/jm/e86rR6wh4wdgE2Bsyq6nLITbrIQJC9+SRbdbo8k3lUVjo5CRWCvHhVvwHUZ1y42Rd
+vuOu4ZbK7kKhN4RodUm8D1yj5EzHZJlZ8SWW0y4w+i4lrIrykJyLwUqi+WhxX5fnGdZuornN/fnU
+vqzlebQzy1f353F04zL5l/qBZo9mnkSzW6vS/qxenhDPzw93dEZCx8HtBeyLyX7mpfiMSqHZkAvu
+rUVRrZOajX8jEajRV7S9/mKLld5UsXlPF/Qqkh9IYoNetYa1gdwW4STEqRK6BoNtEZ/Q+Hg89a59
+st0PH7WwV/042aYoDhMfA0g0aC0g1paZ+S6c+g3SwtOg+is0zufS0C8IZ5ZcSUuLfNU8Sq9KdOEz
+j4dEf8XWuG4+X36Cd47WanvSv9QpEgXkX/0ijGSm2eupOW9MQnusdGtv7BE685nk94NX7/M/TKFy
+/BPJjz4047bJyTBPyH0CqcO2GgDvG2hPgNYku550w1YG954il/X0fxXMC0CFQCRUd9kwqDYeFIFJ
+yQmlQPeMMYDLQIUYpH3kyyXea6e1PzAN2rpSuuUl4M=X02l1`,
     DB_USER: process.env.PPTR_DB_USER || "postgres",
     DB_PASSWORD: process.env.PPTR_DB_PASSWORD || "postgres",
     DB_JDBC_URL: process.env.PPTR_JDBC_URL || "jdbc:postgresql://postgres:5432/confluence",
@@ -72,10 +70,13 @@ const delay = (ms) => {
         // Setup wizard - page 2
         await licenseSetup(page);
 
-        // Setup wizard - page 3
-        await configureDatabase(page);
+        // Setup wizard - page 3 (DC only)
+        await dcDeploymentTypeSelection(page);
 
         // Setup wizard - page 4
+        await configureDatabase(page);
+
+        // Setup wizard - page 5
         await userConfigurationSetup(page);
 
         // Admin settings - disable Confluence onboarding module
@@ -123,7 +124,7 @@ async function installationTypeSelection(page) {
         throw `Exceeded the allowed time to access the url "${url}"`;
     }
 
-    if (url == await page.evaluate(() => document.location.href)) {
+    if (url === await page.evaluate(() => document.location.href)) {
         try {
             await page.click('#custom');
         } catch (e) {
@@ -135,16 +136,16 @@ async function installationTypeSelection(page) {
     await page.waitFor(1500);
 
     url = `${CONFIG.BASE_URL}/setup/selectbundle.action`;
-    if (url == await page.evaluate(() => document.location.href)) {
+    if (url === await page.evaluate(() => document.location.href)) {
         await page.click('#setup-next-button');
     }
     await page.waitFor(1500);
-};
+}
 
 async function licenseSetup(page) {
     console.log("- License set up");
     let url = `${CONFIG.BASE_URL}/setup/setuplicense.action`;
-    if (url == await page.evaluate(() => document.location.href)) {
+    if (url === await page.evaluate(() => document.location.href)) {
         await page.click('#confLicenseString');
         await page.evaluate(license => {
             document.getElementById('confLicenseString').value = license;
@@ -153,48 +154,38 @@ async function licenseSetup(page) {
         await page.click('#setupTypeCustom');
     }
     await page.waitFor(1500)
-};
+}
+
+async function dcDeploymentTypeSelection(page) {
+    console.log("- DC deployment type selection");
+    const dcClusterURL = `${CONFIG.BASE_URL}/setup/setupcluster-start.action`;
+    const dbConfigURL = `${CONFIG.BASE_URL}/setup/setupdbchoice-start.action`;
+    if (dcClusterURL === await page.evaluate(() => document.location.href)) {
+        await page.click('#clusteringDisabled');
+        await page.click('#skip-button');
+    } else if(dbConfigURL === await page.evaluate(() => document.location.href)) {
+        console.log("- Server license detected -> DC Deployment type selection skipped");
+    }
+    await page.waitFor(1500);
+}
 
 async function configureDatabase(page) {
     console.log("- Configuring Database");
-    let url = `${CONFIG.BASE_URL}/setup/setupdbchoice-start.action`;
-    if (url == await page.evaluate(() => document.location.href)) {
-        try {
-            await page.click('#custom');
-            await page.click('#setup-next-button');
-            await page.waitFor(1000);
-            await page.click('#dbConfigInfo-customize');
-            await page.click('#dbConfigInfo-databaseUrl');
-            await page.evaluate(db_url => {
-                document.getElementById('dbConfigInfo-databaseUrl').value = db_url;
-            }, CONFIG.DB_JDBC_URL);
-        } catch (e) {
-            // For older Confluence versions 6.0 to 6.5
-            await page.click('#select-db');
-            await page.waitFor(1000);
-            await Promise.all([
-                page.click('input[value="Direct JDBC"]'),
-                page.waitForNavigation({ timeout: 0, waitUntil: 'networkidle0' })
-            ]);
-            await page.click("#dbConfigInfo\\.databaseUrl");
-            await page.evaluate(db_url => {
-                document.getElementById("dbConfigInfo.databaseUrl").value = db_url;
-            }, CONFIG.DB_JDBC_URL);
-        }
-    }
+    let url = `${CONFIG.BASE_URL}/setup/setupdbtype-start.action?thisNodeClustered=true`; //ToDo: change for server
+    if (url === await page.evaluate(() => document.location.href)) {
+        await page.evaluate(() => {
+            document.querySelector('#dbConfigInfo-customize').click();
+        });
 
-    try {
+        await page.click('#dbConfigInfo-databaseUrl');
+        await page.evaluate(db_url => {
+            document.getElementById('dbConfigInfo-databaseUrl').value = db_url;
+        }, CONFIG.DB_JDBC_URL);
+
         await page.click('#dbConfigInfo-username');
         await page.keyboard.type(CONFIG.DB_USER);
 
         await page.click('#dbConfigInfo-password');
-        await page.keyboard.type(CONFIG.DB_PASSWORD);
-    } catch (e) {
-        // For older Confluence versions 6.0 to 6.5
-        await page.click('#dbConfigInfo\\.userName');
-        await page.keyboard.type(CONFIG.DB_USER);
-
-        await page.click('#dbConfigInfo\\.password');
         await page.keyboard.type(CONFIG.DB_PASSWORD);
     }
     
@@ -202,24 +193,24 @@ async function configureDatabase(page) {
         page.click('#setup-next-button'),
         page.waitForNavigation({ timeout: 0, waitUntil: 'networkidle0' })
     ]);
-};
+}
 
 async function userConfigurationSetup(page) {
     console.log("- User Configuration setup");
     let url = `${CONFIG.BASE_URL}/setup/setupdata-start.action`;
-    if (url == await page.evaluate(() => document.location.href)) {
+    if (url === await page.evaluate(() => document.location.href)) {
         await page.$eval('#blankChoiceForm', form => form.submit());
     }
     await page.waitFor(1000);
 
     url = `${CONFIG.BASE_URL}/setup/setupusermanagementchoice-start.action`;
-    if (url == await page.evaluate(() => document.location.href)) {
+    if (url === await page.evaluate(() => document.location.href)) {
         await page.click('#internal');
     }
     await page.waitFor(1000);
 
     url = `${CONFIG.BASE_URL}/setup/setupadministrator-start.action`;
-    if (url == await page.evaluate(() => document.location.href)) {
+    if (url === await page.evaluate(() => document.location.href)) {
         await page.click('#fullName');
         await page.keyboard.type(ADMIN_USER.fullname);
 
@@ -238,7 +229,7 @@ async function userConfigurationSetup(page) {
         ]);
         await page.waitFor(1500);
     }
-};
+}
 
 async function disableConfluenceOnboardingModule(page) {
     console.log(`- Disable Confluence Onboarding module`);
@@ -265,7 +256,7 @@ async function disableConfluenceOnboardingModule(page) {
     await page.click('div[data-key="com.atlassian.confluence.plugins.confluence-onboarding"]');
     await page.waitFor(5000)
     await page.click('a.aui-button[data-action="DISABLE"]');
-};
+}
 
 async function changeConfluencePath(page) {
     const baseUrl = CONFIG.BASE_URL.replace(/(http[s]?:\/\/)(.*)(:.*)/g, '$1localhost$3');
@@ -280,4 +271,4 @@ async function changeConfluencePath(page) {
     await page.click('#confirm');
     await page.click('#confirm');
     await page.waitFor(5000);
-};
+}

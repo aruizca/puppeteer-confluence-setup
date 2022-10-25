@@ -39,7 +39,7 @@ npm i
 VAR NAME | DEFAULT VALUE
 -------- | -------------
 PPTR_CONFLUENCE_BASE_URL | http://localhost:8090/confluence
-PPTR_CONFLUENCE_LICENSE | [A 3 hours timebob license](https://developer.atlassian.com/platform/marketplace/timebomb-licenses-for-testing-server-apps/)
+PPTR_CONFLUENCE_LICENSE | [A 10 user 3 hour Confluence DC license](https://developer.atlassian.com/platform/marketplace/timebomb-licenses-for-testing-server-apps/#:~:text=10%20user%20Confluence%20Data%20Center%20license%2C%20expires%20in%203%20hours)
 PPTR_DB_USER | postgres
 PPTR_DB_PASSWORD | postgres
 PPTR_JDBC_URL | jdbc:postgresql://postgres:5432/confluence
@@ -47,7 +47,7 @@ PPTR_HEADLESS | false
 
 ## Versions supported
 
-For now the script supports any version from 6.0.x to 7.x.
+For now the script supports any version from 7.9.0 to 7.20.x
 
 ### How long does it take?
 
