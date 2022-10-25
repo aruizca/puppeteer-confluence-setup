@@ -14,6 +14,7 @@ This script uses puppeteer in order to automate the following setup steps:
 
 - Installation type selection
 - License set up
+- Deployment Type selection (DC only)
 - Configuring Database
 - User Configuration setup
 - Disable Confluence Onboarding module
@@ -47,16 +48,17 @@ PPTR_HEADLESS | false
 
 ## Versions supported
 
-For now the script supports any version from 7.9.0 to 7.20.x
+For now the script supports any version from 7.9.0 to 7.20.x for both server and DC
 
 ### How long does it take?
 
 These are the benchmarks to complete the setup in different Confluence version:
 
-| Confluence Version | Time taken to complete setup |
-| :----------------: | ---------------------------: |
-| 6.0.7  | 157.856 s |
-| 6.6.17 | 174.286 s |
-| 7.3.3  | 204.567 s |
+| Confluence DC Version | Time taken to complete setup |
+|:---------------------:|-----------------------------:|
+|         7.9.0         |                    155.673 s |
+|     7.13.0 (LTS)      |                    182.541 s |
+|     7.19.0 (LTS)      |                    182.927 s |
+|        7.20.0         |                    186.118 s |
 
 ⚠️ Note how each newer version steadily requires more time to complete the same process.
