@@ -12,7 +12,7 @@ const ADMIN_USER = {
 // Configuration settings with defaults
 const CONFIG = {
     BASE_URL: process.env.PPTR_CONFLUENCE_BASE_URL || "http://localhost:8090/confluence",
-    // If no license is provided, then this 10 user 3 hour timebomb license for any Confluence DC is used
+    // If no license is provided, then this 10 user 3 hour timebomb license for Confluence DC is used
     CONFLUENCE_LICENSE: process.env.PPTR_CONFLUENCE_LICENSE || `AAABtQ0ODAoPeNp9kV9v0zAUxd/9Ka7EWyWnTmESqxSJNQlbxdJUTbLBgAfXuV0NqR3ZTqHfHjdpY
 VSCB7/4/jm/e86rR6wh4wdgE2Bsyq6nLITbrIQJC9+SRbdbo8k3lUVjo5CRWCvHhVvwHUZ1y42Rd
 vuOu4ZbK7kKhN4RodUm8D1yj5EzHZJlZ8SWW0y4w+i4lrIrykJyLwUqi+WhxX5fnGdZuornN/fnU
@@ -158,8 +158,11 @@ async function licenseSetup(page) {
 
 async function dcDeploymentTypeSelection(page) {
     console.log("- DC deployment type selection");
+
     const dcClusterURL = `${CONFIG.BASE_URL}/setup/setupcluster-start.action`;
     const dbConfigURL = `${CONFIG.BASE_URL}/setup/setupdbchoice-start.action`;
+
+    // Select DC deployment type if a DC license was introduced
     if (dcClusterURL === await page.evaluate(() => document.location.href)) {
         await page.click('#clusteringDisabled');
         await page.click('#skip-button');
@@ -171,8 +174,21 @@ async function dcDeploymentTypeSelection(page) {
 
 async function configureDatabase(page) {
     console.log("- Configuring Database");
-    let url = `${CONFIG.BASE_URL}/setup/setupdbtype-start.action?thisNodeClustered=true`; //ToDo: change for server
-    if (url === await page.evaluate(() => document.location.href)) {
+
+    const server_db_choose_url = `${CONFIG.BASE_URL}/setup/setupdbchoice-start.action`;
+    const dc_db_setup_url = `${CONFIG.BASE_URL}/setup/setupdbtype-start.action?thisNodeClustered=true`;
+    const server_db_setup_url = `${CONFIG.BASE_URL}/setup/setupdbtype-start.action`;
+
+    // Select db to custom if a server license was introduced
+    if (server_db_choose_url === await page.evaluate(() => document.location.href)) {
+        await page.click('#custom');
+        await page.click('#setup-next-button');
+
+        await page.waitFor(1000);
+    }
+
+    if (dc_db_setup_url === await page.evaluate(() => document.location.href)
+        || server_db_setup_url === await page.evaluate(() => document.location.href) ) {
         await page.evaluate(() => {
             document.querySelector('#dbConfigInfo-customize').click();
         });
