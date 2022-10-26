@@ -257,7 +257,7 @@ async function disableConfluenceOnboardingModule(page) {
     console.log(`- Disable Confluence Onboarding module`);
     // Authenticate as admin
     await page.click('#further-configuration')
-    await page.waitFor(5000);
+    await page.waitFor(10000);
     await page.click('#password');
     await page.keyboard.type(ADMIN_USER.password);
     await Promise.all([
