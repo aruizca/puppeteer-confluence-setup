@@ -10,4 +10,4 @@ docker run --rm \
     -e PPTR_HEADLESS=true \
     -e PPTR_CONFLUENCE_BASE_URL=http://confluence:8090/confluence \
     --network docker-confluence-for-testing_confluence-net \
-    puppeteer-confluence-setup
+    aruizca/puppeteer-confluence-setup
