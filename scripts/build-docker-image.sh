@@ -2,4 +2,4 @@
 
 # Set current folder to where the Dockerfile is
 cd "$(dirname "$0")"/..
-docker build -t aruizca/puppeteer-confluence-setup .
+docker build --platform linux/amd64 -t aruizca/puppeteer-confluence-setup .
