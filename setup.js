@@ -25,7 +25,8 @@ yQmlQPeMMYDLQIUYpH3kyyXea6e1PzAN2rpSuuUl4M=X02l1`,
     DB_USER: process.env.PPTR_DB_USER || "postgres",
     DB_PASSWORD: process.env.PPTR_DB_PASSWORD || "postgres",
     DB_JDBC_URL: process.env.PPTR_JDBC_URL || "jdbc:postgresql://postgres:5432/confluence",
-    HEADLESS: process.env.PPTR_HEADLESS || false
+    HEADLESS: process.env.PPTR_HEADLESS || false,
+    LDAP_CONFIG: process.env.PPTR_LDAP_CONFIG || true
 };
 
 // Async timeout
@@ -82,9 +83,14 @@ const delay = (ms) => {
         // Admin settings - disable Confluence onboarding module
         await disableConfluenceOnboardingModule(page)
 
-        // Admin settings - set Confluence path to localhost
+        // Admin settings - set Confluence path to 'localhost' (if not 'localhost' already)
         if (!CONFIG.BASE_URL.includes('localhost')) {
             await changeConfluencePath(page);
+        }
+
+        // Admin settings - User Directory configuration (optional)
+        if(CONFIG.LDAP_CONFIG === true) {
+            await setUpUserDirectoryConfig(page);
         }
 
         await page.screenshot({ path: `${SCREENSHOTS_OUTPUT_PATH}/confluence-setup-finished.png` });
@@ -287,4 +293,203 @@ async function changeConfluencePath(page) {
     await page.click('#confirm');
     await page.click('#confirm');
     await page.waitFor(5000);
+}
+
+async function setUpUserDirectoryConfig(page) {
+    console.log("- Linking OpenLDAP User Directory (https://github.com/aruizca/docker-test-openldap)");
+
+    // Go to LDAP User Directory addition form
+    let url = `${CONFIG.BASE_URL}/plugins/servlet/embedded-crowd/configure/ldap`;
+    await page.goto(url);
+    await page.waitFor(1000);
+
+    // Server Settings - Server Name: Futurama HR
+    await page.click('#configure-ldap-form-name');
+    await page.evaluate(name => {
+        document.getElementById('configure-ldap-form-name').value = name;
+    }, "Futurama HR");
+    await page.waitFor(1000);
+
+    // Server Settings - Directory Type: OpenLDAP
+    await page.select('#configure-ldap-form-type', 'com.atlassian.crowd.directory.OpenLDAP')
+
+    //  Server Settings - Hostname: ldap
+    await page.click('#configure-ldap-form-hostname');
+    await page.evaluate(hostName => {
+        document.getElementById('configure-ldap-form-hostname').value = hostName;
+    }, "ldap");
+
+    //  Server Settings - Port: 389
+    await page.click('#configure-ldap-form-port');
+    await page.evaluate(port => {
+        document.getElementById('configure-ldap-form-port').value = port;
+    }, "389");
+
+    // Server Settings - Use SSL: false
+    const useSSL = await page.$("#configure-ldap-form-useSSL");
+    const isUseSslChecked = await (await useSSL.getProperty("checked")).jsonValue();
+    if(isUseSslChecked) {
+        useSSL.click();
+    }
+
+    //  Server Settings - Username: cn=admin,dc=planetexpress,dc=com
+    await page.click('#configure-ldap-form-ldapUserdn');
+    await page.evaluate(userName => {
+        document.getElementById('configure-ldap-form-ldapUserdn').value = userName;
+    }, "cn=admin,dc=planetexpress,dc=com");
+
+    //  Server Settings - Password: password
+    await page.click('#configure-ldap-form-ldapPassword');
+    await page.evaluate(password => {
+        document.getElementById('configure-ldap-form-ldapPassword').value = password;
+    }, "password");
+
+    // LDAP Schema - Base DN: dc=planetexpress,dc=com
+    await page.click('#configure-ldap-form-ldapBasedn');
+    await page.evaluate(baseDN => {
+        document.getElementById('configure-ldap-form-ldapBasedn').value = baseDN;
+    }, "dc=planetexpress,dc=com");
+
+    // LDAP Schema - Additional User DN: ''
+    await page.click('#configure-ldap-form-ldapUserDn');
+    await page.evaluate(ldapUserDn => {
+        document.getElementById('configure-ldap-form-ldapUserDn').value = ldapUserDn;
+    }, "");
+
+    // LDAP Schema - Additional Group DN: ''
+    await page.click('#configure-ldap-form-ldapGroupDn');
+    await page.evaluate(ldapGroupDn => {
+        document.getElementById('configure-ldap-form-ldapGroupDn').value = ldapGroupDn;
+    }, "");
+
+    // LDAP Permissions - Permissions: Read Only, with Local Groups
+    const ldapPermissionsRadio = await page.$('#configure-ldap-form-ldapPermissionOption-READ_ONLY_LOCAL_GROUPS');
+    await ldapPermissionsRadio.evaluate(r => r.click());
+    // await page.click('#configure-ldap-form-ldapPermissionOption-READ_ONLY_LOCAL_GROUPS');
+    await page.waitFor(1000);
+
+    // LDAP Permissions - Default Group Memberships: confluence-users
+    await page.click('#configure-ldap-form-ldapAutoAddGroups');
+    await page.evaluate(defaultGroup => {
+        document.getElementById('configure-ldap-form-ldapAutoAddGroups').value = defaultGroup;
+    }, "confluence-users");
+
+    // User Schema - display
+    await page.click('#toggle-user-scheme-settings > div > span');
+
+    // User Schema - User Object Class: inetorgperson
+    await page.click('#configure-ldap-form-ldapUserObjectclass');
+    await page.evaluate(userObjClass => {
+        document.getElementById('configure-ldap-form-ldapUserObjectclass').value = userObjClass;
+    }, "inetorgperson");
+
+    // User Schema - User Object Filter: (objectclass=inetorgperson)
+    await page.click('#configure-ldap-form-ldapUserFilter');
+    await page.evaluate(userObjFilter => {
+        document.getElementById('configure-ldap-form-ldapUserFilter').value = userObjFilter;
+    }, "(objectclass=inetorgperson)");
+
+    // User Schema - User Name Attribute: uid
+    await page.click('#configure-ldap-form-ldapUserUsername');
+    await page.evaluate(userNameAttribute => {
+        document.getElementById('configure-ldap-form-ldapUserUsername').value = userNameAttribute;
+    }, "uid");
+
+    // User Schema - User Name RDN Attribute: cn
+    await page.click('#configure-ldap-form-ldapUserUsernameRdn');
+    await page.evaluate(userRDNAttribute => {
+        document.getElementById('configure-ldap-form-ldapUserUsernameRdn').value = userRDNAttribute;
+    }, "cn");
+
+    // User Schema - User First Name Attribute: givenName
+    await page.click('#configure-ldap-form-ldapUserFirstname');
+    await page.evaluate(userFirstName => {
+        document.getElementById('configure-ldap-form-ldapUserFirstname').value = userFirstName;
+    }, "givenName");
+
+    // User Schema - User Last Name Attribute: sn
+    await page.click('#configure-ldap-form-ldapUserLastname');
+    await page.evaluate(userLastNameAttribute => {
+        document.getElementById('configure-ldap-form-ldapUserLastname').value = userLastNameAttribute;
+    }, "sn");
+
+    // User Schema - User Display Name Attribute: displayName
+    await page.click('#configure-ldap-form-ldapUserDisplayname');
+    await page.evaluate(userDisplayNameAttribute => {
+        document.getElementById('configure-ldap-form-ldapUserDisplayname').value = userDisplayNameAttribute;
+    }, "displayName");
+
+    // User Schema - Generic User Email Attribute: mail
+    await page.click('#configure-ldap-form-ldapUserEmail');
+    await page.evaluate(userMailAttribute => {
+        document.getElementById('configure-ldap-form-ldapUserEmail').value = userMailAttribute;
+    }, "mail");
+
+    // User Schema - User Password Attribute: userPassword
+    await page.click('#configure-ldap-form-ldapUserPassword');
+    await page.evaluate(userPassword => {
+        document.getElementById('configure-ldap-form-ldapUserPassword').value = userPassword;
+    }, "userPassword");
+
+    // User Schema - User Password Encryption: sha
+    await page.select('#configure-ldap-form-ldapUserEncryption', 'sha');
+
+    // User Schema - User Unique ID Attribute: entryUUID
+    await page.click('#configure-ldap-form-ldapExternalId');
+    await page.evaluate(uniqueIdAttribute => {
+        document.getElementById('configure-ldap-form-ldapExternalId').value = uniqueIdAttribute;
+    }, "entryUUID");
+
+    // Group Schema - display
+    await page.click('#toggle-group-schema-settings > div > span');
+
+    // Group Schema - Group Object Class: Group
+    await page.click('#configure-ldap-form-ldapGroupObjectclass');
+    await page.evaluate(groupObjClass => {
+        document.getElementById('configure-ldap-form-ldapGroupObjectclass').value = groupObjClass;
+    }, "Group");
+
+    // Group Schema - Group Object Filter: (objectClass=Group)
+    await page.click('#configure-ldap-form-ldapGroupFilter');
+    await page.evaluate(groupObjFilter => {
+        document.getElementById('configure-ldap-form-ldapGroupFilter').value = groupObjFilter;
+    }, "(objectClass=Group)");
+
+    // Group Schema - Group Name Attribute: cn
+    await page.click('#configure-ldap-form-ldapGroupName');
+    await page.evaluate(groupNameAttribute => {
+        document.getElementById('configure-ldap-form-ldapGroupName').value = groupNameAttribute;
+    }, "cn");
+
+    // Group Schema - Group Description Attribute: description
+    await page.click('#configure-ldap-form-ldapGroupDescription');
+    await page.evaluate(groupDescrAttribute => {
+        document.getElementById('configure-ldap-form-ldapGroupDescription').value = groupDescrAttribute;
+    }, "description");
+
+    // Membership Schema - display
+    await page.click('#toggle-membership-schema-settings > div > span');
+
+    // Membership Schema - Group Members Attribute: member
+    await page.click('#configure-ldap-form-ldapGroupUsernames');
+    await page.evaluate(groupMembersAttribute => {
+        document.getElementById('configure-ldap-form-ldapGroupUsernames').value = groupMembersAttribute;
+    }, "member");
+
+    // Membership Schema - User Membership Attribute: memberOf
+    await page.click('#configure-ldap-form-ldapUserGroup');
+    await page.evaluate(userMembershipAttribute => {
+        document.getElementById('configure-ldap-form-ldapUserGroup').value = userMembershipAttribute;
+    }, "memberOf");
+
+    // Membership Schema - Use the User Membership Attribute: false
+    const ldapUserMembershipUse = await page.$("#configure-ldap-form-ldapUsermembershipUse");
+    const isLdapUserMembershipUseChecked = await (await ldapUserMembershipUse.getProperty("checked")).jsonValue();
+    if(isLdapUserMembershipUseChecked) {
+        ldapUserMembershipUse.click();
+    }
+
+    // Configuration - Save configuration
+    await page.click('#configure-ldap-form-submit');
+    await page.waitFor(1000);
 }

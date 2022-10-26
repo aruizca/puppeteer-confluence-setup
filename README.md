@@ -12,13 +12,14 @@ I don't know how many times I have repeated the same process manually, **but tho
 
 This script uses puppeteer in order to automate the following setup steps:
 
-- Installation type selection
-- License set up
-- Deployment Type selection (DC only)
-- Configuring Database
-- User Configuration setup
-- Disable Confluence Onboarding module
-- Setting Confluence base url to use localhost as hostname
+1. Installation type selection
+2. License set up
+3. Deployment Type selection (DC only)
+4. Configuring Database
+5. User Configuration setup
+6. Disable Confluence Onboarding module
+7. Setting Confluence base url to use 'localhost' as hostname (if it is not 'localhost' already)
+8. Configuring [OpenLDAP user directory](https://github.com/aruizca/docker-test-openldap) (optional)
 
 There are two ways this script can be used:
 
@@ -45,6 +46,7 @@ PPTR_DB_USER | postgres
 PPTR_DB_PASSWORD | postgres
 PPTR_JDBC_URL | jdbc:postgresql://postgres:5432/confluence
 PPTR_HEADLESS | false
+PPTR_LDAP_CONFIG | true (set to false if [OpenLDAP Docker](https://github.com/aruizca/docker-test-openldap) is NOT used)
 
 ## Versions supported
 
