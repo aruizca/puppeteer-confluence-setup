@@ -1,6 +1,6 @@
 {
   "name": "puppeteer-confluence-setup",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A puppeteer based script to automate the initial setup of Confluence for testing purposes ",
   "main": "setup.js",
   "scripts": {
