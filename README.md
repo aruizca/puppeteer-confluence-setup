@@ -47,6 +47,7 @@ PPTR_DB_PASSWORD | postgres
 PPTR_JDBC_URL | jdbc:postgresql://postgres:5432/confluence
 PPTR_HEADLESS | false
 PPTR_LDAP_CONFIG | true (set to false if [OpenLDAP Docker](https://github.com/aruizca/docker-test-openldap) is NOT used)
+PPTR_LDAP_PORT | 389 
 
 ## Versions supported
 

@@ -26,7 +26,8 @@ yQmlQPeMMYDLQIUYpH3kyyXea6e1PzAN2rpSuuUl4M=X02l1`,
     DB_PASSWORD: process.env.PPTR_DB_PASSWORD || "postgres",
     DB_JDBC_URL: process.env.PPTR_JDBC_URL || "jdbc:postgresql://postgres:5432/confluence",
     HEADLESS: process.env.PPTR_HEADLESS || false,
-    LDAP_CONFIG: process.env.PPTR_LDAP_CONFIG || true
+    LDAP_CONFIG: process.env.PPTR_LDAP_CONFIG || true,
+    LDAP_PORT: process.env.PPTR_LDAP_PORT || 389
 };
 
 // Async timeout
@@ -89,7 +90,7 @@ const delay = (ms) => {
         }
 
         // Admin settings - User Directory configuration (optional)
-        if(CONFIG.LDAP_CONFIG === true) {
+        if(CONFIG.LDAP_CONFIG === true || CONFIG.LDAP_CONFIG === 'true') {
             await setUpUserDirectoryConfig(page);
         }
 
@@ -323,7 +324,7 @@ async function setUpUserDirectoryConfig(page) {
     await page.click('#configure-ldap-form-port');
     await page.evaluate(port => {
         document.getElementById('configure-ldap-form-port').value = port;
-    }, "389");
+    }, `${CONFIG.LDAP_PORT}`);
 
     // Server Settings - Use SSL: false
     const useSSL = await page.$("#configure-ldap-form-useSSL");
