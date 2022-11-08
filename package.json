@@ -23,7 +23,6 @@
   },
   "homepage": "https://github.com/aruizca/puppeteer-confluence-setup#readme",
   "dependencies": {
-    "puppeteer": "^2.1.1",
-    "rimraf": "^3.0.2"
+    "puppeteer": "^15.4.0"
   }
 }

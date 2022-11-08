@@ -36,75 +36,81 @@ const delay = (ms) => {
 };
 
 (async () => {
-    const browser = await puppeteer.launch({
-        headless: CONFIG.HEADLESS,
-        args: [
-            '--window-size=1280,900',
-            '--no-sandbox'
-        ]
-    });
-    const page = await browser.newPage();
-    await page.setViewport({
-        width: 1280,
-        height: 900,
-    });
-
-    const SCREENSHOTS_OUTPUT_PATH = './screenshots'
-
     try {
-        console.log(`Setting up Confluence standalone instance at: ${CONFIG.BASE_URL}`);
-        console.log("============================================");
-        console.log("with Config:");
-        console.log(CONFIG);
-        console.log("--------------------------------------------\n");
-        console.log("Setup Steps:");
-        // Start timing now
-        const start = new Date();
-        // Setup screenshot directory
-        if (fs.existsSync(SCREENSHOTS_OUTPUT_PATH)) {
-            // We remove previous screenshots
-            rimraf.sync(`${SCREENSHOTS_OUTPUT_PATH}/*.png`);
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--window-size=1280,900',
+                '--no-sandbox',
+                '--disable-gpu'
+            ],
+            executablePath: process.env.CHROME_BIN || null,
+            });
+        const page = await browser.newPage();
+        await page.setViewport({
+            width: 1280,
+            height: 900,
+        });
+    
+        const SCREENSHOTS_OUTPUT_PATH = './screenshots';
+
+        try {
+            console.log(`Setting up Confluence standalone instance at: ${CONFIG.BASE_URL}`);
+            console.log("============================================");
+            console.log("with Config:");
+            console.log(CONFIG);
+            console.log("--------------------------------------------\n");
+            console.log("Setup Steps:");
+            // Start timing now
+            const start = new Date();
+            // Setup screenshot directory
+            if (fs.existsSync(SCREENSHOTS_OUTPUT_PATH)) {
+                // We remove previous screenshots
+                rimraf.sync(`${SCREENSHOTS_OUTPUT_PATH}/*.png`);
+            }
+            
+            // Setup wizard - page 1
+            await installationTypeSelection(page);
+    
+            // Setup wizard - page 2
+            await licenseSetup(page);
+    
+            // Setup wizard - page 3 (DC only)
+            await dcDeploymentTypeSelection(page);
+    
+            // Setup wizard - page 4
+            await configureDatabase(page);
+    
+            // Setup wizard - page 5
+            await userConfigurationSetup(page);
+    
+            // Admin settings - disable Confluence onboarding module
+            await disableConfluenceOnboardingModule(page)
+    
+            // Admin settings - set Confluence path to 'localhost' (if not 'localhost' already)
+            if (!CONFIG.BASE_URL.includes('localhost')) {
+                await changeConfluencePath(page);
+            }
+    
+            // Admin settings - User Directory configuration (optional)
+            if(CONFIG.LDAP_CONFIG === true || CONFIG.LDAP_CONFIG === 'true') {
+                await setUpUserDirectoryConfig(page);
+            }
+    
+            await page.screenshot({ path: `${SCREENSHOTS_OUTPUT_PATH}/confluence-setup-finished.png` });
+            const end = new Date();
+            const timeTakenInSeconds = (end - start)/1000
+            console.log(`\nConfluence standalone instance setup has finished !! (${timeTakenInSeconds} seconds)`);
+            console.log("====================================================");
+        } catch (error) {
+            console.error(`exception thrown ${error.stack}`)
+            await page.screenshot({ path: `${SCREENSHOTS_OUTPUT_PATH}/puppeteer-error.png` });
+            await browser.close();
+        } finally {
+            await browser.close();
         }
-        
-        // Setup wizard - page 1
-        await installationTypeSelection(page);
-
-        // Setup wizard - page 2
-        await licenseSetup(page);
-
-        // Setup wizard - page 3 (DC only)
-        await dcDeploymentTypeSelection(page);
-
-        // Setup wizard - page 4
-        await configureDatabase(page);
-
-        // Setup wizard - page 5
-        await userConfigurationSetup(page);
-
-        // Admin settings - disable Confluence onboarding module
-        await disableConfluenceOnboardingModule(page)
-
-        // Admin settings - set Confluence path to 'localhost' (if not 'localhost' already)
-        if (!CONFIG.BASE_URL.includes('localhost')) {
-            await changeConfluencePath(page);
-        }
-
-        // Admin settings - User Directory configuration (optional)
-        if(CONFIG.LDAP_CONFIG === true || CONFIG.LDAP_CONFIG === 'true') {
-            await setUpUserDirectoryConfig(page);
-        }
-
-        await page.screenshot({ path: `${SCREENSHOTS_OUTPUT_PATH}/confluence-setup-finished.png` });
-        const end = new Date();
-        const timeTakenInSeconds = (end - start)/1000
-        console.log(`\nConfluence standalone instance setup has finished !! (${timeTakenInSeconds} seconds)`);
-        console.log("====================================================");
-    } catch (error) {
-        console.error(`exception thrown ${error.stack}`)
-        await page.screenshot({ path: `${SCREENSHOTS_OUTPUT_PATH}/puppeteer-error.png` });
-        await browser.close();
-    } finally {
-        await browser.close();
+    }catch (error) {
+        console.error(`exception thrown ${error.stack}`);
     }
 })();
 
@@ -140,13 +146,13 @@ async function installationTypeSelection(page) {
         }
         await page.click('#setup-next-button');
     }
-    await page.waitFor(1500);
+    await page.waitForTimeout(1500);
 
     url = `${CONFIG.BASE_URL}/setup/selectbundle.action`;
     if (url === await page.evaluate(() => document.location.href)) {
         await page.click('#setup-next-button');
     }
-    await page.waitFor(1500);
+    await page.waitForTimeout(1500);
 }
 
 async function licenseSetup(page) {
@@ -160,7 +166,7 @@ async function licenseSetup(page) {
 
         await page.click('#setupTypeCustom');
     }
-    await page.waitFor(1500)
+    await page.waitForTimeout(1500)
 }
 
 async function dcDeploymentTypeSelection(page) {
@@ -176,7 +182,7 @@ async function dcDeploymentTypeSelection(page) {
     } else if(dbConfigURL === await page.evaluate(() => document.location.href)) {
         console.log("- Server license detected -> DC Deployment type selection skipped");
     }
-    await page.waitFor(1500);
+    await page.waitForTimeout(1500);
 }
 
 async function configureDatabase(page) {
@@ -191,7 +197,7 @@ async function configureDatabase(page) {
         await page.click('#custom');
         await page.click('#setup-next-button');
 
-        await page.waitFor(1000);
+        await page.waitForTimeout(1000);
     }
 
     if (dc_db_setup_url === await page.evaluate(() => document.location.href)
@@ -224,13 +230,13 @@ async function userConfigurationSetup(page) {
     if (url === await page.evaluate(() => document.location.href)) {
         await page.$eval('#blankChoiceForm', form => form.submit());
     }
-    await page.waitFor(1000);
+    await page.waitForTimeout(1000);
 
     url = `${CONFIG.BASE_URL}/setup/setupusermanagementchoice-start.action`;
     if (url === await page.evaluate(() => document.location.href)) {
         await page.click('#internal');
     }
-    await page.waitFor(1000);
+    await page.waitForTimeout(1000);
 
     url = `${CONFIG.BASE_URL}/setup/setupadministrator-start.action`;
     if (url === await page.evaluate(() => document.location.href)) {
@@ -250,7 +256,7 @@ async function userConfigurationSetup(page) {
             page.click('#setup-next-button'),
             page.waitForNavigation({ timeout: 0, waitUntil: 'networkidle0' })
         ]);
-        await page.waitFor(1500);
+        await page.waitForTimeout(1500);
     }
 }
 
@@ -258,7 +264,7 @@ async function disableConfluenceOnboardingModule(page) {
     console.log(`- Disable Confluence Onboarding module`);
     // Authenticate as admin
     await page.click('#further-configuration')
-    await page.waitFor(10000);
+    await page.waitForTimeout(10000);
     await page.click('#password');
     await page.keyboard.type(ADMIN_USER.password);
     await Promise.all([
@@ -271,13 +277,13 @@ async function disableConfluenceOnboardingModule(page) {
     await page.goto(url);
 
     // Search for confluence-onboarding app and disable it
-    await page.waitFor(10000)
+    await page.waitForTimeout(10000)
     await page.click('#upm-manage-filter-box');
     await page.evaluate(() => document.getElementById("upm-manage-filter-box").value = "");
     await page.keyboard.type("onboarding");
-    await page.waitFor(5000)
+    await page.waitForTimeout(5000)
     await page.click('div[data-key="com.atlassian.confluence.plugins.confluence-onboarding"]');
-    await page.waitFor(5000)
+    await page.waitForTimeout(5000)
     await page.click('a.aui-button[data-action="DISABLE"]');
 }
 
@@ -293,7 +299,7 @@ async function changeConfluencePath(page) {
     await page.keyboard.type(baseUrl);
     await page.click('#confirm');
     await page.click('#confirm');
-    await page.waitFor(5000);
+    await page.waitForTimeout(5000);
 }
 
 async function setUpUserDirectoryConfig(page) {
@@ -302,14 +308,14 @@ async function setUpUserDirectoryConfig(page) {
     // Go to LDAP User Directory addition form
     let url = `${CONFIG.BASE_URL}/plugins/servlet/embedded-crowd/configure/ldap`;
     await page.goto(url);
-    await page.waitFor(1000);
+    await page.waitForTimeout(1000);
 
     // Server Settings - Server Name: Futurama HR
     await page.click('#configure-ldap-form-name');
     await page.evaluate(name => {
         document.getElementById('configure-ldap-form-name').value = name;
     }, "Futurama HR");
-    await page.waitFor(1000);
+    await page.waitForTimeout(1000);
 
     // Server Settings - Directory Type: OpenLDAP
     await page.select('#configure-ldap-form-type', 'com.atlassian.crowd.directory.OpenLDAP')
@@ -367,7 +373,7 @@ async function setUpUserDirectoryConfig(page) {
     const ldapPermissionsRadio = await page.$('#configure-ldap-form-ldapPermissionOption-READ_ONLY_LOCAL_GROUPS');
     await ldapPermissionsRadio.evaluate(r => r.click());
     // await page.click('#configure-ldap-form-ldapPermissionOption-READ_ONLY_LOCAL_GROUPS');
-    await page.waitFor(1000);
+    await page.waitForTimeout(1000);
 
     // LDAP Permissions - Default Group Memberships: confluence-users
     await page.click('#configure-ldap-form-ldapAutoAddGroups');
@@ -492,5 +498,5 @@ async function setUpUserDirectoryConfig(page) {
 
     // Configuration - Save configuration
     await page.click('#configure-ldap-form-submit');
-    await page.waitFor(1000);
+    await page.waitForTimeout(1000);
 }
