@@ -27,7 +27,8 @@ yQmlQPeMMYDLQIUYpH3kyyXea6e1PzAN2rpSuuUl4M=X02l1`,
     DB_JDBC_URL: process.env.PPTR_JDBC_URL || "jdbc:postgresql://postgres:5432/confluence",
     HEADLESS: process.env.PPTR_HEADLESS || false,
     LDAP_CONFIG: process.env.PPTR_LDAP_CONFIG || true,
-    LDAP_PORT: process.env.PPTR_LDAP_PORT || 389
+    LDAP_PORT: process.env.PPTR_LDAP_PORT || 389,
+    MAILSERVER_CONFIG: process.env.PPTR_MAILSERVER_CONFIG || true
 };
 
 // Async timeout
@@ -95,6 +96,10 @@ const delay = (ms) => {
             // Admin settings - User Directory configuration (optional)
             if(CONFIG.LDAP_CONFIG === true || CONFIG.LDAP_CONFIG === 'true') {
                 await setUpUserDirectoryConfig(page);
+            }
+
+            if(CONFIG.MAILSERVER_CONFIG === true || CONFIG.MAILSERVER_CONFIG === 'true') {
+                await configureMailServer(page);
             }
     
             await page.screenshot({ path: `${SCREENSHOTS_OUTPUT_PATH}/confluence-setup-finished.png` });
@@ -499,4 +504,31 @@ async function setUpUserDirectoryConfig(page) {
     // Configuration - Save configuration
     await page.click('#configure-ldap-form-submit');
     await page.waitForTimeout(1000);
+}
+
+async function configureMailServer(page) {
+    console.log("- Configuring Mail Server");
+    const url = `${CONFIG.BASE_URL}/admin/mail/createmailserver.action?protocol=smtp`;
+    console.log(url);  
+    await page.goto(url);
+
+    await page.click('#emailAddress');
+    await page.evaluate(() => document.getElementById("emailAddress").value = "");
+    await page.keyboard.type("confluence@mail.com");
+
+    await page.click('#fromName');
+    await page.evaluate(() => document.getElementById("fromName").value = "");
+    await page.keyboard.type("Confluence localhost");
+
+    await page.click('#hostname');
+    await page.evaluate(() => document.getElementById("hostname").value = "");
+    await page.keyboard.type("mailserver");
+
+    await page.click('#port');
+    await page.evaluate(() => document.getElementById("port").value = "");
+    await page.keyboard.type("1025");
+    
+    // Configuration - Save configuration
+    await page.click('#confirm');
+    await page.waitForTimeout(5000);
 }
